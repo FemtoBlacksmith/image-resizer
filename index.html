@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Image Resizer — resize to a target size for uploads</title>
+<meta name="description" content="Resize a photo to a maximum dimension in your browser and download it. Useful for meeting upload size limits in verification and onboarding forms. Nothing uploaded.">
+<meta name="keywords" content="onboarding-tools, image-resizer, resize-image, image-dimensions, upload-size-limit, photo-resize">
+<meta property="og:title" content="Image Resizer — resize to a target size for uploads">
+<meta property="og:description" content="Resize a photo to a maximum dimension in your browser and download it. Useful for meeting upload size limits in verification and onboarding forms. Nothing uploaded.">
+<meta property="og:type" content="website">
+<style>
+:root{color-scheme:light dark;--bg:#fff;--fg:#1a1a1a;--muted:#666;--line:#e2e2e2;
+--accent:#2563eb;--card:#f7f8fa;--ok:#1a7f37;--warn:#b7791f;--bad:#cf222e}
+@media(prefers-color-scheme:dark){:root{--bg:#161616;--fg:#e8e8e8;--muted:#a0a0a0;
+--line:#333;--accent:#7aa2f7;--card:#1e2128;--ok:#3fb950;--warn:#d29922;--bad:#f85149}}
+*{box-sizing:border-box}
+body{margin:0;padding:2rem 1.1rem 4rem;background:var(--bg);color:var(--fg);
+font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+main{max-width:44rem;margin:0 auto}
+h1{font-size:1.85rem;line-height:1.2;margin:0 0 .4rem}
+h2{font-size:1.2rem;margin:2.2rem 0 .7rem;padding-top:1.1rem;border-top:1px solid var(--line)}
+h3{font-size:1rem;margin:1.2rem 0 .3rem}
+p{margin:0 0 1rem}.lede{color:var(--muted);font-size:1.05rem;margin-bottom:1.6rem}
+a{color:var(--accent)}
+.tool{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1.2rem;margin:1.5rem 0}
+.tool label{display:block;font-size:.85rem;color:var(--muted);margin:.7rem 0 .2rem;font-weight:600}
+.tool input,.tool select{width:100%;padding:.55rem .65rem;border:1px solid var(--line);
+border-radius:7px;background:var(--bg);color:var(--fg);font:inherit;font-size:.95rem}
+.tool .row{display:grid;grid-template-columns:1fr 1fr;gap:.7rem}
+@media(max-width:520px){.tool .row{grid-template-columns:1fr}}
+.tool button{margin-top:1rem;padding:.6rem 1.1rem;border:0;border-radius:7px;
+background:var(--accent);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.tool button.sec{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.out{margin-top:1rem;padding:.9rem 1rem;border-radius:8px;background:var(--bg);
+border:1px solid var(--line);font-size:.95rem;min-height:1.5rem}
+.out .big{font-size:1.6rem;font-weight:700;letter-spacing:-.5px}
+.out table{width:100%;border-collapse:collapse;font-size:.9rem;margin-top:.4rem}
+.out td{padding:.35rem .2rem;border-bottom:1px solid var(--line)}
+.out td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+.note{font-size:.82rem;color:var(--muted);margin-top:.6rem}
+ul{margin:0 0 1rem 1.2rem}li{margin-bottom:.35rem}
+footer{margin-top:2.5rem;padding-top:1.1rem;border-top:1px solid var(--line);color:var(--muted);font-size:.9rem}
+</style>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Is my photo uploaded?", "acceptedAnswer": {"@type": "Answer", "text": "No. It is resized in your browser and never sent anywhere."}}, {"@type": "Question", "name": "Does it keep the aspect ratio?", "acceptedAnswer": {"@type": "Answer", "text": "Yes. It scales so the longest side matches your limit and the shape is preserved \u2014 no stretching or cropping."}}, {"@type": "Question", "name": "Will resizing remove metadata too?", "acceptedAnswer": {"@type": "Answer", "text": "Yes, as a side effect. Re-encoding through a canvas produces a file with only pixels, so EXIF and GPS are dropped."}}]}</script>
+</head><body><main>
+<h1>Image Resizer — resize to a target size for uploads</h1>
+<p class="lede">Resize a photo to a maximum dimension in your browser and download it. Useful for meeting upload size limits in verification and onboarding forms. Nothing uploaded.</p>
+<div class="tool">
+<div id="drop" style="border:2px dashed var(--line);border-radius:10px;padding:1.6rem;text-align:center;cursor:pointer">
+  <input id="f" type="file" accept="image/*" style="display:none">
+  <span class="muted">Drop a photo here, or click to choose</span>
+</div>
+<label>Max dimension (longest side, px)</label>
+<input id="max" type="number" value="1024" min="16" step="1">
+<div class="out" id="o" aria-live="polite" style="margin-top:1rem">No file yet.</div>
+<script>
+var d=document.getElementById('drop'),f=document.getElementById('f'),o=document.getElementById('o'),cur=null;
+d.onclick=function(){f.click()};
+d.ondragover=function(e){e.preventDefault();d.style.borderColor='var(--accent)'};
+d.ondragleave=function(){d.style.borderColor='var(--line)'};
+d.ondrop=function(e){e.preventDefault();d.style.borderColor='var(--line)';if(e.dataTransfer.files[0])load(e.dataTransfer.files[0])};
+f.onchange=function(){if(f.files[0])load(f.files[0])};
+document.getElementById('max').oninput=function(){if(cur)resize();};
+function load(file){var img=new Image();img.onload=function(){cur={img:img,name:file.name};resize();URL.revokeObjectURL(img.src);};
+  img.onerror=function(){o.innerHTML='<span class="bad">Could not read that image.</span>';};img.src=URL.createObjectURL(file);}
+function resize(){
+  var img=cur.img,mx=+document.getElementById('max').value||1024;
+  var scale=Math.min(1,mx/Math.max(img.naturalWidth,img.naturalHeight));
+  var w=Math.round(img.naturalWidth*scale),h=Math.round(img.naturalHeight*scale);
+  var c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);
+  c.toBlob(function(b){
+    var a=document.createElement('a');a.href=URL.createObjectURL(b);
+    a.download=cur.name.replace(/\.[^.]+$/,'')+'-'+w+'x'+h+'.jpg';
+    a.textContent='Download '+w+'×'+h+' ('+(b.size/1024).toFixed(0)+' KB)';
+    a.className='pill';a.style.cssText='display:inline-block;padding:.5rem .9rem;border:1px solid var(--accent);border-radius:7px;color:var(--accent);text-decoration:none';
+    o.innerHTML='<div class="ok" style="margin-bottom:.5rem">✓ Resized from '+img.naturalWidth+'×'+img.naturalHeight+' to '+w+'×'+h+'.</div>';
+    o.appendChild(a);
+    var nt=document.createElement('div');nt.className='note';nt.textContent='Aspect ratio preserved; metadata dropped on re-encode.';o.appendChild(nt);
+  },'image/jpeg',0.9);
+}
+</script></div>
+<p class="note">Everything runs in your browser. No data is uploaded or stored.</p>
+<h2>About this tool</h2>
+<p>A small tool that does one thing well: A resizer that scales a photo down to a maximum width or height and hands back the smaller file.</p><p>Verification and onboarding forms often reject images that are too large or too high-resolution. This resizes proportionally in your browser and lets you download the result — and because it re-encodes, it also drops EXIF and GPS metadata as a side effect.</p><p>The image is processed locally and never uploaded.</p>
+<h2>How to use it</h2>
+<ol><li>Drop or choose the photo.</li><li>Set the maximum dimension (longest side, in pixels).</li><li>Download the resized copy.</li></ol>
+<h2>Frequently asked questions</h2>
+<h3>Is my photo uploaded?</h3><p>No. It is resized in your browser and never sent anywhere.</p><h3>Does it keep the aspect ratio?</h3><p>Yes. It scales so the longest side matches your limit and the shape is preserved — no stretching or cropping.</p><h3>Will resizing remove metadata too?</h3><p>Yes, as a side effect. Re-encoding through a canvas produces a file with only pixels, so EXIF and GPS are dropped.</p>
+<footer><p>Built by the team behind
+<a href="https://faceonlive.com" rel="noopener">FaceOnLive</a> — on-premise face recognition, liveness detection, and ID verification SDKs for developers.</p></footer>
+</main></body></html>
